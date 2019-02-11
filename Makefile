@@ -1,6 +1,8 @@
 EXE = ok
+SHELL := /bin/bash
 CC = gcc
 OBJDIR = obj
+DICT = ./dictionaries/webster
 SRC = $(wildcard *.c)
 HDR = $(wildcard *.h)
 OBJ = $(patsubst %.c, $(OBJDIR)/%.o, $(SRC))
@@ -27,8 +29,10 @@ debug: $(SRC) $(HDR)
 
 run:
 	make
-	./ok supercalifragilisticespealidocious
-	./ok orange
-	./ok aardvark
+	./ok turtles
+	./ok turtle
+	./ok barley
+	#use this to run ./ok on all words in a dictionary.
+	#xargs -0 -n 1 ./ok < <(tr \\n \\0 <./dictionaries/webster)
 	
 

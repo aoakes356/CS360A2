@@ -10,9 +10,12 @@
 #define DICTIONARY_PATH "./dictionaries/webster"
 #define WORD_LENGTH 16
 
+// Read the word off of a given line number. currentLine is set to the line number that was read.
 int readWord(int fd, int lineNumber, int* currentLine, char* buffer);
+// 'Clean' an input string of any non accepted characters.
 int process(char* inputString);
-int search(int fd, char* word);
+// Search a given file descriptor for an occurence of a given word.
+int search(int fd, char* buff, char** argv);
 
 int main(int argc, char** argv){
     // Check input for errors, and process it.
@@ -31,45 +34,17 @@ int main(int argc, char** argv){
         printf("%s\n",strerror(errno));
         return -1;
     }
-    int res, end = lseek(fd, 0, SEEK_END), high = end/16, nextLine =(high+(high%2))/2, low = 0, currentLine = 0, range;
-    lseek(fd,-end,SEEK_CUR);
-    do{
-        // If the current line is lower than the input string then low = currentline
-        if(readWord(fd,nextLine,&currentLine, buff) < 0){
-            printf("Failed to read line %i\n",nextLine);
-            return -1;
-        }
-        res = strcmp(buff, argv[1]);
-        if(res == 0){
-            printf("yes\n");
-            return 0;
-        }
-        if(res < 0){ // most recent line is less than the argument which was passed in, go further down.
-            /*printf("low %s. %s.\n",buff, argv[1]);
-            printf("High: %i, Low: %i\n",high, low);*/
-            low = currentLine;
-            range = high-low;
-            nextLine = low+(range+(range%2==0))/2;
-        }else if(res > 0){ // Most recent line was greater than the argument, go up in the file.
-            /*printf("high %s. %s.\n",buff,argv[1]);
-            printf("High: %i, Low: %i\n",high, low);*/
-            high = currentLine;
-            range = high-low;
-            nextLine = high-(range+(range%2==0))/2;
-        }
-    }while(high - low > 1);
-    printf("no\n");
-    return 0;
+    return search(fd,buff, argv);    
 }
 
 int process(char* inputString){
     // Remove white space and truncate at WORD_LENGTH
     int i, spaces, res = 0;
-    for(i = 0, spaces = 0; inputString[i+spaces] != '\0' && i+spaces< WORD_LENGTH; i++){
+    for(i = 0, spaces = 0; inputString[i+spaces] != '\0' && i< WORD_LENGTH; i++){
         while(isspace(inputString[i+spaces])) spaces++;
         if((res = isalpha(inputString[i+spaces])) || ispunct(inputString[i+spaces]) || isdigit(inputString[i+spaces])){
             if(res){
-                inputString[i] = tolower(inputString[i+spaces]);
+                //inputString[i] = tolower(inputString[i+spaces]);
             }else{
                 inputString[i] = inputString[i+spaces]; 
             }
@@ -98,7 +73,7 @@ int readWord(int fd, int lineNumber, int* currentLine, char* buffer){
     *currentLine = lineNumber;
 	if(read(fd, buffer, WORD_LENGTH) == WORD_LENGTH){
         int i = 0;
-        while((isalpha(buffer[i]) || ispunct(buffer[i]) ) && buffer[i] != '\0') i++;
+        while((isalpha(buffer[i]) || ispunct(buffer[i]) || isdigit(buffer[i])) && buffer[i] != '\0') i++;
         buffer[i] = '\0';
         return res;
     }
@@ -108,7 +83,38 @@ int readWord(int fd, int lineNumber, int* currentLine, char* buffer){
 
 }
 
-
-int search(int fd, char* word){
+int search(int fd, char* buff, char** argv){
+    int res, end = lseek(fd, 0, SEEK_END), high = end/WORD_LENGTH+1, nextLine =(high+(high%2))/2, low = 0, currentLine = 0, range;
+    lseek(fd,-end,SEEK_CUR);
+    do{
+        // If the current line is lower than the input string then low = currentline
+        if(readWord(fd,nextLine,&currentLine, buff) < 0){
+            printf("Failed to read line %i\n",nextLine);
+            return -1;
+        }
+        res = strcmp(buff, argv[1]);
+        if(res == 0){
+            printf("yes\n");
+            return 0;
+        }
+        if(res < 0){ // most recent line is less than the argument which was passed in, go further down.
+            /*printf("low %s. %s.\n",buff, argv[1]);
+              printf("High: %i, Low: %i\n",high, low);*/
+            low = currentLine;
+            range = high-low;
+            nextLine = low+(range+(range%2!=0))/2;
+        }else if(res > 0){ // Most recent line was greater than the argument, go up in the file.
+            /*printf("high %s. %s.\n",buff,argv[1]);
+              printf("High: %i, Low: %i\n",high, low);*/
+            high = currentLine;
+            range = high-low;
+            nextLine = high-(range+(range%2==0))/2;
+        }
+    }while(high - low > 1);
+    if(!(strcmp(buff,argv[1]))){
+        printf("yes\n"); 
+        return 0;
+    }
+    printf("no\n");
     return 0;
 }
